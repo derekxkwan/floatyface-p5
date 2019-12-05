@@ -1,0 +1,68 @@
+function create_trigger(cur_url, arr_idxs, dist_fn, increasing, history_num)
+{
+    let cur_trig = {};
+    cur_trig["inst"] =   new Tone.Player({
+	"url": cur_url,
+	"loop": false
+	}).toMaster();
+    cur_trig["arr_idxs"] = arr_idxs;
+    cur_trig["dist_fn"] = dist_fn;
+    cur_trig["hist_num"] = history_num;
+    cur_trig["history"] = Array.from({length: history_num}, () => 0);
+    cur_trig["hist_idx"] = 0;
+    cur_trig["increasing"] = increasing;
+    cur_trig["can_trigger"] = true;
+    cur_trig["last_avg"] = 0;
+    cur_trig["get_avg"] = function(pos)
+    {
+	let cur_avg = 0;
+	let cur_dist = dist_fn(pos);
+	let hist_num = cur_trig["hist_num"];
+	let cur_idx = cur_trig["hist_idx"];
+	let cur_hist = cur_trig["history"];
+	
+	cur_hist[cur_idx] = cur_dist;
+	for(var i =0; i < hist_num; i++)
+	{
+	    cur_avg += cur_hist[i];
+	};
+
+	cur_trig["history"] = cur_hist;
+	cur_trig["hist_idx"] = (cur_idx + 1) % hist_num;
+
+	return cur_avg;
+    };
+    
+    cur_trig["compare_fn"] = function(pos)
+    {
+	let cur_avg = cur_trig["get_avg"](pos);
+	let last_avg = cur_trig["last_avg"]
+	let increasing = cur_trig["increasing"];
+	let can_trigger = cur_trig["can_trigger"];
+	
+	let will_trigger = false;
+	
+	if(increasing == true)
+	{
+	    if((cur_avg > last_avg) && can_trigger == true)
+	    {
+		will_trigger = true;
+		cur_trig["can_trigger"] = false;
+	    }
+	    else if (cur_avg < last_avg)
+		cur_trig["can_trigger"] = true;
+	}
+	else
+	{
+	    if((cur_avg < last_avg) && can_trigger == true)
+	    {
+		will_trigger = true;
+		cur_trig["can_trigger"] = false;
+	    }
+	    else if (cur_avg > last_avg)
+		cur_trig["can_trigger"] = true;
+	};
+
+	return will_trigger;
+    };
+}

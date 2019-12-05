@@ -1,0 +1,179 @@
+let w = 400, h = 300, hw = w/2.0, hh = h/2.0;
+let cnv, cam, ctracker, pos = [];
+let eyethresh = 280, mouththresh = 110;
+let prevmouth = false, nummouth = 0;
+let bg;
+let inco; let facelayer, toplayer;
+let fidx = 0, numfaces = 3, maxzoom = 1.075;
+let alphaincr = 255.0/numfaces, zoomincr = (maxzoom - 1.0)/numfaces;
+let berryfiles = ["res/berry0.jpg", "res/berry1.jpg", "res/berry2.jpg", "res/berry3.jpg", "res/berry4.jpg"];
+let berry = Array.from({length: berryfiles.length});;
+let berrytint = [[0, 255, 128], [51, 153, 255], [255, 102, 255], [255, 153, 51], [204, 153, 255]];
+let bgdur = 500;
+
+function preload()
+{
+    inco = loadFont('res/Inconsolata.otf');
+    bg = loadImage('res/hazy.jpg');
+    for(let i = 0; i < berryfiles.length; i++)
+    {
+	berry[i] = loadImage(berryfiles[i]);
+    };
+}
+
+
+
+function setup()
+{
+    //frameRate(12);
+    console.log("start");
+    cam = load_cam();
+    cam.hide();
+    ctracker = load_tracker(cam);
+    cnv = load_canvas(w,h);
+    facelayer = Array.from({length: numfaces},() => createGraphics(w,h));
+    toplayer = createGraphics(w,h);
+    textFont(inco);
+    textSize(height / 30);
+    fill(255);
+    textAlign(CENTER, CENTER);
+    toplayer.imageMode(CENTER);
+}
+
+function draw_eye(eye_arr)
+{
+    facelayer[fidx].beginContour();
+   for(var i =1; i < eye_arr.length; i++)
+    {
+	let cur_idx = eye_arr[i];
+	let cur_x = pos[cur_idx][0];
+	let cur_y = pos[cur_idx][1];
+
+	//circle(cur_x, cur_y, 5);
+	facelayer[fidx].vertex(cur_x, cur_y);
+    };
+
+    facelayer[fidx].endContour();
+}
+
+function draw_mouth()
+{
+    facelayer[fidx].beginContour();
+   for(var i =1; i < innermouth.length; i++)
+    {
+	let cur_idx = innermouth[i];
+	let cur_x = pos[cur_idx][0];
+	let cur_y = pos[cur_idx][1];
+
+	//circle(cur_x, cur_y, 5);
+	facelayer[fidx].vertex(cur_x, cur_y);
+    };
+
+    facelayer[fidx].endContour();
+}
+
+function drawlayers()
+{
+    //toplayer.fill(255,50);
+    //toplayer.noStroke();
+    //toplayer.rect(0,0,w,h);
+
+
+    let curface = (fidx + 1) % numfaces;
+    let curalpha = alphaincr;
+    let curzoom =  maxzoom;
+    
+
+    toplayer.clear();
+
+    for(let i=0 ; i < numfaces; i++)
+    {
+	toplayer.tint(255, curalpha);
+	toplayer.image(facelayer[fidx], hw, hh, w*curzoom, h*curzoom);
+	curalpha += alphaincr;
+	curzoom -= zoomincr;
+	curface = (i + curface) % numfaces;
+    };
+    toplayer.noTint();
+    fidx = (fidx + 1) % numfaces;
+}
+
+function drawparts()
+{
+
+    //toplayer.fill(255,50);
+    //toplayer.noStroke();
+    //toplayer.rect(0,0,w,h);
+    facelayer[fidx].image(cam,0,0,w,h);
+    facelayer[fidx].erase();
+    facelayer[fidx].beginShape();
+    facelayer[fidx].vertex(0,h);
+    facelayer[fidx].vertex(w,h),
+    facelayer[fidx].vertex(w,0);
+    facelayer[fidx].vertex(0,0);
+    draw_eye(lefteye);
+    draw_eye(righteye);
+    draw_mouth();
+    facelayer[fidx].endShape(CLOSE);
+    facelayer[fidx].noErase();
+    //toplayer.image(facelayer,0,0,w,h);
+
+    //image(toplayer,0,0,w,h);
+    drawlayers();
+    image(toplayer,0,0,w,h);
+
+
+}
+
+function draw_pos()
+{
+    for(var i =0; i < pos.length; i++)
+    {
+	let cur_x = pos[i][0];
+	let cur_y = pos[i][1];
+
+	//circle(cur_x, cur_y, 5);
+	text(i, cur_x, cur_y);
+    }
+}
+
+function draw()
+{
+    //clear();
+    pos = get_pos(ctracker);
+
+    if(pos.length > 0)
+    {
+	let cur_idx = Math.floor(millis()/bgdur) % berryfiles.length;
+	let cur_tint = berrytint[cur_idx];
+	imageMode(CENTER);
+	tint(cur_tint[0], cur_tint[1], cur_tint[2]);
+
+	//fill(0,255,0);
+
+
+
+	//tint(255,100);
+	image(berry[cur_idx], hw, hh);
+	noTint();
+	imageMode(CORNER);
+	drawparts();
+	//image(toplayer,0,0,w,h);
+
+	//draw_pos();
+	//eyehit(pos, lefteye);
+	/*
+	if(leftthresh == true)
+	{
+	    blankeye(pos,lefteye);
+	    //console.log("BLANKING");
+
+	}
+	*/
+	//console.log(leftthresh);
+	//rightthresh = eyeopen(pos, righteye);
+	//console.log(rightthresh);
+//	mouthhit(pos, innermouth);
+
+    };
+}
